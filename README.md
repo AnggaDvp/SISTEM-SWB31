@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # SYSTEM NSS SWB31 – WhatsApp Blast Management
 
 Aplikasi web (Next.js + React + TypeScript) dengan database SQLite melalui **Turso/libSQL**, siap di-deploy ke **Vercel**.
@@ -93,3 +94,6 @@ Lokal: isi di `.env.local`. Di Vercel: **Project → Settings → Environment Va
 ## 8. Pengembangan lokal tanpa akun Turso
 
 Jalankan database lokal: `turso dev` (biasanya `http://127.0.0.1:8080`), lalu isi `TURSO_DATABASE_URL=http://127.0.0.1:8080` dan kosongkan `TURSO_AUTH_TOKEN`.
+=======
+# SISTEM-SWB31
+>>>>>>> 1efdb8d71f6b0a1c4663cd192d9122586cb2b39a
