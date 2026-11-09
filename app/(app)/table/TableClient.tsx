@@ -21,6 +21,8 @@ export default function TableClient() {
   const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
   const [isDefaultTpl, setIsDefaultTpl] = useState(true);
   const [tplLoaded, setTplLoaded] = useState(false);
+  const [waImage, setWaImage] = useState<string | null>(null);
+  const [waImageName, setWaImageName] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (f: Filters) => {
@@ -57,6 +59,8 @@ export default function TableClient() {
         if (typeof d.template === "string") {
           setTemplate(d.template);
           setIsDefaultTpl(!!d.isDefault);
+          setWaImage(typeof d.image === "string" ? d.image : null);
+          setWaImageName(typeof d.imageName === "string" ? d.imageName : null);
         }
       })
       .catch(() => undefined)
@@ -181,9 +185,13 @@ export default function TableClient() {
           <TemplateEditor
             template={template}
             isDefault={isDefaultTpl}
-            onSaved={(t, d) => {
+            image={waImage}
+            imageName={waImageName}
+            onSaved={(t, d, img, imgName) => {
               setTemplate(t);
               setIsDefaultTpl(d);
+              setWaImage(img);
+              setWaImageName(imgName);
             }}
           />
         )}
@@ -193,6 +201,8 @@ export default function TableClient() {
         <DetailPanel
           customer={selected}
           template={template}
+          image={waImage}
+          imageName={waImageName}
           onClose={() => setSelected(null)}
           onEdit={() => setEditing(selected)}
           onDelete={() => void remove(selected)}

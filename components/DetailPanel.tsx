@@ -8,13 +8,15 @@ import { buildMessage } from "@/lib/template";
 type Props = {
   customer: Customer;
   template: string;
+  image: string | null;
+  imageName: string | null;
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onUpdated: (c: Customer) => void;
 };
 
-export default function DetailPanel({ customer: c, template, onClose, onEdit, onDelete, onUpdated }: Props) {
+export default function DetailPanel({ customer: c, template, image, imageName, onClose, onEdit, onDelete, onUpdated }: Props) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -47,6 +49,23 @@ export default function DetailPanel({ customer: c, template, onClose, onEdit, on
     const msg = buildMessage(template, { name: c.name, contract_no: c.contract_no });
     const url = `https://wa.me/${c.whatsapp}?text=${encodeURIComponent(msg)}`;
     window.open(url, "_blank", "noopener,noreferrer");
+    // wa.me tidak bisa melampirkan gambar, jadi unduh poster agar bisa dilampirkan manual di WhatsApp.
+    if (image) downloadDataUrl(image, imageName || "poster");
+  }
+
+  function downloadDataUrl(dataUrl: string, filename: string) {
+    try {
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      // Pastikan ekstensi sesuai tipe gambar.
+      const ext = dataUrl.split(";")[0].split("/")[1]?.replace("jpeg", "jpg") || "jpg";
+      a.download = filename.replace(/\.[^.]+$/, "") + "." + ext;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
+      // abaikan jika unduh gagal; pesan teks tetap terbuka di WhatsApp.
+    }
   }
 
   const rows: [string, string][] = [
@@ -107,7 +126,7 @@ export default function DetailPanel({ customer: c, template, onClose, onEdit, on
         {waNote && <div className="warn" style={{ marginTop: ".6rem" }}>{waNote}</div>}
         {c.wa_valid && (
           <div className="hint" style={{ marginTop: ".6rem" }}>
-            WhatsApp akan terbuka dengan pesan terisi. Pesan baru terkirim setelah Anda menekan Kirim di WhatsApp.
+            WhatsApp akan terbuka dengan pesan terisi.{image ? " Gambar poster otomatis diunduh — lampirkan file tersebut di WhatsApp sebelum menekan Kirim." : ""} Pesan baru terkirim setelah Anda menekan Kirim di WhatsApp.
           </div>
         )}
 
@@ -115,6 +134,16 @@ export default function DetailPanel({ customer: c, template, onClose, onEdit, on
           <details style={{ marginTop: "1rem" }}>
             <summary>Lihat pesan yang akan dikirim</summary>
             <div className="preview">{buildMessage(template, { name: c.name, contract_no: c.contract_no })}</div>
+            {image && (
+              <div style={{ marginTop: ".75rem" }}>
+                <div className="hint" style={{ marginBottom: ".4rem" }}>Gambar poster yang dilampirkan:</div>
+                <img
+                  src={image}
+                  alt="Poster promo"
+                  style={{ maxWidth: "100%", maxHeight: "320px", border: "1px solid #ddd", borderRadius: 8 }}
+                />
+              </div>
+            )}
           </details>
         )}
       </aside>

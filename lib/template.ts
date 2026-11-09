@@ -1,6 +1,11 @@
 import { getGreeting } from "./greeting";
 
 export const TEMPLATE_KEY = "wa_template";
+export const WA_IMAGE_KEY = "wa_image";
+export const WA_IMAGE_NAME_KEY = "wa_image_name";
+
+// Batas ukuran gambar poster yang disimpan sebagai data URL (base64) di database.
+export const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB
 
 export const DEFAULT_TEMPLATE = `Selamat {KONDISI_SALAM} Bapak/Ibu {NAMA_KONSUMEN} 🙏 Dengan Nomor Kontrak {NOMOR_KONTRAK}.
 
