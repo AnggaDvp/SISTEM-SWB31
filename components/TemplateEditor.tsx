@@ -123,7 +123,7 @@ export default function TemplateEditor({ template, isDefault, image, imageName, 
             onChange={(e) => void onPickFile(e)}
           />
           <p className="hint">
-            Gambar ini akan diunduh otomatis saat tombol CHAT WHATSAPP diklik, lalu Anda lampirkan di WhatsApp sebelum menekan Kirim.
+            Gambar ini otomatis disalin saat tombol CHAT WHATSAPP diklik — tinggal tekan Ctrl+V (tempel) di WhatsApp, lalu Kirim. Teks otomatis jadi keterangan gambar.
           </p>
         </div>
 
