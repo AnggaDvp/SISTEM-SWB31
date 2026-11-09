@@ -1,0 +1,28 @@
+name: Backup database mingguan
+
+# Backup berkala otomatis. Hasilnya tersimpan sebagai "artifact" di tab Actions selama 90 hari.
+# PENTING: gunakan repository PRIVATE. Isi TURSO_DATABASE_URL dan TURSO_AUTH_TOKEN di
+# GitHub > Settings > Secrets and variables > Actions.
+on:
+  schedule:
+    - cron: "0 20 * * 0" # Minggu 20:00 UTC = Senin 03:00 WIB
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/backup.mjs
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backup-database
+          path: backups/
+          retention-days: 90
