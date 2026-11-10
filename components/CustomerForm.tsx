@@ -96,10 +96,6 @@ export default function CustomerForm({ mode, initial, onSaved, onCancel }: Props
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.status === 401) {
-        window.location.href = "/login";
-        return;
-      }
       if (res.status === 409 && data.code === "DUPLICATE") {
         setError(data.error);
         if (mode === "create") setDuplicate(true);

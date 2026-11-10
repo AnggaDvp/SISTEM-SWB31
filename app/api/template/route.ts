@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { guard, serverError } from "@/lib/auth";
+import { serverError } from "@/lib/api";
 import {
   DEFAULT_TEMPLATE,
   TEMPLATE_KEY,
@@ -20,8 +20,6 @@ async function getSetting(db: ReturnType<typeof getDb> extends Promise<infer T> 
 }
 
 export async function GET(req: Request) {
-  const denied = await guard(req);
-  if (denied) return denied;
   try {
     const db = await getDb();
     const [tplRes, imgRes, nameRes] = await Promise.all([
@@ -47,8 +45,6 @@ export async function GET(req: Request) {
 // - template kosong ("") = kembali ke bawaan.
 // - image null/"" = hapus gambar. image berupa data URL image/* (base64).
 export async function PUT(req: Request) {
-  const denied = await guard(req);
-  if (denied) return denied;
   try {
     const body = (await req.json().catch(() => null)) as {
       template?: unknown;

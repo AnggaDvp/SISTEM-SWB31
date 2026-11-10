@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { guard, serverError } from "@/lib/auth";
+import { serverError } from "@/lib/api";
 import { CUSTOMER_COLS, rowToCustomer } from "@/lib/customers";
 import { parseCustomer } from "@/lib/validation";
 
@@ -15,8 +15,6 @@ function parseId(id: string): number | null {
 }
 
 export async function GET(req: Request, ctx: Ctx) {
-  const denied = await guard(req);
-  if (denied) return denied;
   try {
     const id = parseId((await ctx.params).id);
     if (!id) return NextResponse.json({ error: "ID tidak valid." }, { status: 400 });
@@ -30,8 +28,6 @@ export async function GET(req: Request, ctx: Ctx) {
 }
 
 export async function PUT(req: Request, ctx: Ctx) {
-  const denied = await guard(req);
-  if (denied) return denied;
   try {
     const id = parseId((await ctx.params).id);
     if (!id) return NextResponse.json({ error: "ID tidak valid." }, { status: 400 });
@@ -66,8 +62,6 @@ export async function PUT(req: Request, ctx: Ctx) {
 }
 
 export async function DELETE(req: Request, ctx: Ctx) {
-  const denied = await guard(req);
-  if (denied) return denied;
   try {
     const id = parseId((await ctx.params).id);
     if (!id) return NextResponse.json({ error: "ID tidak valid." }, { status: 400 });

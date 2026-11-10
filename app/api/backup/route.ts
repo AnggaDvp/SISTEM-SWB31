@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { guard, serverError } from "@/lib/auth";
+import { serverError } from "@/lib/api";
 import { CUSTOMER_COLS, rowToCustomer } from "@/lib/customers";
 import { parseCustomer } from "@/lib/validation";
 import { STATUSES } from "@/lib/types";
@@ -11,8 +11,6 @@ export const dynamic = "force-dynamic";
 
 // Backup penuh (JSON): seluruh konsumen + template pesan.
 export async function GET(req: Request) {
-  const denied = await guard(req);
-  if (denied) return denied;
   try {
     const db = await getDb();
     const [cust, tpl] = await Promise.all([
@@ -56,8 +54,6 @@ export async function GET(req: Request) {
 // Pulihkan dari file backup JSON. Bersifat menambah/memperbarui berdasarkan nomor kontrak,
 // TIDAK menghapus data yang sudah ada.
 export async function POST(req: Request) {
-  const denied = await guard(req);
-  if (denied) return denied;
   try {
     const body = (await req.json().catch(() => null)) as { customers?: unknown; template?: unknown } | null;
     if (!body || !Array.isArray(body.customers)) {

@@ -32,10 +32,6 @@ export default function TableClient() {
       const sp = new URLSearchParams();
       Object.entries(f).forEach(([k, v]) => v && sp.set(k, v));
       const res = await fetch(`/api/customers?${sp.toString()}`, { cache: "no-store" });
-      if (res.status === 401) {
-        window.location.href = "/login";
-        return;
-      }
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return setError(data.error ?? "Gagal memuat data.");
       setRows(data.customers as Customer[]);

@@ -8,7 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "db:init": "node --env-file=.env.local scripts/init-db.mjs",
-    "db:backup": "node --env-file=.env.local scripts/backup.mjs"
+    "db:backup": "node --env-file=.env.local scripts/backup.mjs",
+    "db:migrate": "node scripts/migrate-turso.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.15.0",

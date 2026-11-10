@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { guard, serverError } from "@/lib/auth";
+import { serverError } from "@/lib/api";
 import { CUSTOMER_COLS, csvCell, rowToCustomer } from "@/lib/customers";
 import { displayPhone } from "@/lib/validation";
 
@@ -9,8 +9,6 @@ export const dynamic = "force-dynamic";
 
 // Export CSV (UTF-8 + BOM, bisa dibuka langsung di Excel).
 export async function GET(req: Request) {
-  const denied = await guard(req);
-  if (denied) return denied;
   try {
     const db = await getDb();
     const res = await db.execute(`SELECT ${CUSTOMER_COLS} FROM customers ORDER BY id ASC`);

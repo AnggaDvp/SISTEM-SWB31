@@ -58,10 +58,6 @@ export default function DetailPanel({ customer: c, template, image, imageName, o
         body: JSON.stringify({ comm_status: status }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.status === 401) {
-        window.location.href = "/login";
-        return;
-      }
       if (!res.ok) return setError(data.error ?? "Gagal memperbarui status.");
       onUpdated(data.customer as Customer);
     } catch {

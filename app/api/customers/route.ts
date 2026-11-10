@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { guard, serverError } from "@/lib/auth";
+import { serverError } from "@/lib/api";
 import { CUSTOMER_COLS, escapeLike, rowToCustomer, UPSERT_SQL } from "@/lib/customers";
 import { parseCustomer } from "@/lib/validation";
 import { BRANDS, STATUSES } from "@/lib/types";
@@ -16,8 +16,6 @@ const SORTS: Record<string, string> = {
 };
 
 export async function GET(req: Request) {
-  const denied = await guard(req);
-  if (denied) return denied;
   try {
     const sp = new URL(req.url).searchParams;
     const q = (sp.get("q") ?? "").trim().slice(0, 100);
@@ -71,8 +69,6 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const denied = await guard(req);
-  if (denied) return denied;
   try {
     const parsed = parseCustomer(await req.json().catch(() => null));
     if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });

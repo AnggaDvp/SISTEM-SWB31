@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { guard, serverError } from "@/lib/auth";
+import { serverError } from "@/lib/api";
 import { CUSTOMER_COLS, rowToCustomer } from "@/lib/customers";
 import { STATUSES } from "@/lib/types";
 
@@ -8,8 +8,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const denied = await guard(req);
-  if (denied) return denied;
   try {
     const id = Number((await ctx.params).id);
     if (!Number.isInteger(id) || id <= 0) return NextResponse.json({ error: "ID tidak valid." }, { status: 400 });
