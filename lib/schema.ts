@@ -1,6 +1,9 @@
 // Salinan dari db/schema.sql — dijalankan otomatis (IF NOT EXISTS) saat database pertama kali dipakai.
 // Kolom brand sengaja TANPA CHECK constraint agar daftar merek bisa diperluas tanpa migrasi ulang.
-export const SCHEMA_STATEMENTS: string[] = [
+// PENTING (urutan migrasi): tabel dibuat lebih dahulu TANPA indeks, lalu kolom baru pada
+// database lama ditambahkan (migrateExtraColumns), baru indeks dibuat. Bila indeks pada kolom
+// baru (wa_status, batch_id) dibuat sebelum kolomnya ada, batch akan gagal dan seluruh API error.
+export const SCHEMA_TABLES: string[] = [
   `CREATE TABLE IF NOT EXISTS customers (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     contract_no         TEXT NOT NULL UNIQUE,
@@ -21,12 +24,6 @@ export const SCHEMA_STATEMENTS: string[] = [
     created_at          TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
   )`,
-  `CREATE INDEX IF NOT EXISTS idx_customers_name ON customers (name)`,
-  `CREATE INDEX IF NOT EXISTS idx_customers_brand ON customers (brand)`,
-  `CREATE INDEX IF NOT EXISTS idx_customers_tenor ON customers (tenor)`,
-  `CREATE INDEX IF NOT EXISTS idx_customers_status ON customers (comm_status)`,
-  `CREATE INDEX IF NOT EXISTS idx_customers_wa_status ON customers (wa_status)`,
-  `CREATE INDEX IF NOT EXISTS idx_customers_batch ON customers (batch_id)`,
   `CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     email         TEXT NOT NULL UNIQUE,
@@ -52,7 +49,6 @@ export const SCHEMA_STATEMENTS: string[] = [
     unprocessed INTEGER NOT NULL DEFAULT 0,
     uploaded_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`,
-  `CREATE INDEX IF NOT EXISTS idx_import_batches_time ON import_batches (uploaded_at)`,
   // Log aksi blast WhatsApp (setiap kali tombol Chat ditekan) + status proses & admin.
   `CREATE TABLE IF NOT EXISTS blast_logs (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,6 +57,17 @@ export const SCHEMA_STATEMENTS: string[] = [
     admin       TEXT NOT NULL DEFAULT '',
     created_at  TEXT NOT NULL DEFAULT (datetime('now'))
   )`,
+];
+
+// Indeks dibuat paling akhir, setelah semua kolom dipastikan tersedia.
+export const SCHEMA_INDEXES: string[] = [
+  `CREATE INDEX IF NOT EXISTS idx_customers_name ON customers (name)`,
+  `CREATE INDEX IF NOT EXISTS idx_customers_brand ON customers (brand)`,
+  `CREATE INDEX IF NOT EXISTS idx_customers_tenor ON customers (tenor)`,
+  `CREATE INDEX IF NOT EXISTS idx_customers_status ON customers (comm_status)`,
+  `CREATE INDEX IF NOT EXISTS idx_customers_wa_status ON customers (wa_status)`,
+  `CREATE INDEX IF NOT EXISTS idx_customers_batch ON customers (batch_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_import_batches_time ON import_batches (uploaded_at)`,
   `CREATE INDEX IF NOT EXISTS idx_blast_logs_created ON blast_logs (created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_blast_logs_customer ON blast_logs (customer_id)`,
 ];
