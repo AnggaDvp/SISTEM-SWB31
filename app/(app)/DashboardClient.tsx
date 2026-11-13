@@ -13,6 +13,15 @@ type Stats = {
   near_maturity_threshold: number;
   status_distribution: Record<string, number>;
   brand_distribution: { brand: string; n: number }[];
+  follow_up: {
+    done: number;
+    not_followable: number;
+    ro_total: number;
+    ro_done: number;
+    blast_total: number;
+    blast_done: number;
+    blast_failed: number;
+  };
   blasts: { today: number; last_7_days: number; this_month: number; daily_limit: number };
 };
 
@@ -71,6 +80,30 @@ export default function DashboardClient() {
         <div className="stat-card stat-danger">
           <div className="stat-label">Sisa ≤ {stats.near_maturity_threshold} Bulan</div>
           <div className="stat-value">{stats.near_maturity}</div>
+        </div>
+      </div>
+
+      <h2 style={{ marginTop: ".5rem" }}>Data Sudah Difollow Up</h2>
+      <div className="stat-grid">
+        <div className="stat-card stat-ok">
+          <div className="stat-label">Sudah Difollow Up</div>
+          <div className="stat-value">{stats.follow_up.done}</div>
+          <div className="stat-foot">Status proses &quot;Selesai Dikonfirmasi&quot;</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">DATA RO (Input Manual)</div>
+          <div className="stat-value">{stats.follow_up.ro_done}</div>
+          <div className="stat-foot">dari {stats.follow_up.ro_total} data RO</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">DATA BLAST (Excel)</div>
+          <div className="stat-value">{stats.follow_up.blast_done}</div>
+          <div className="stat-foot">dari {stats.follow_up.blast_total} data blast</div>
+        </div>
+        <div className="stat-card stat-danger">
+          <div className="stat-label">Tidak Bisa Difollow Up</div>
+          <div className="stat-value">{stats.follow_up.not_followable}</div>
+          <div className="stat-foot">nomor WA tidak ada / tidak valid</div>
         </div>
       </div>
 

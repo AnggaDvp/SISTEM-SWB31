@@ -2,19 +2,37 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { BRANDS, MAX_TENOR, STATUSES, type Customer } from "@/lib/types";
+import { BRANDS, MAX_TENOR, STATUSES, WA_STATUSES, type Customer } from "@/lib/types";
 import { displayPhone } from "@/lib/validation";
 import CustomerForm from "@/components/CustomerForm";
 import DetailPanel from "@/components/DetailPanel";
 import { DEFAULT_TEMPLATE } from "@/lib/template";
 
-type Filters = { q: string; brand: string; tenor: string; status: string; wa: string; sort: string };
+type Filters = {
+  q: string;
+  brand: string;
+  tenor: string;
+  status: string;
+  wa: string;
+  wa_status: string;
+  source: string;
+  sort: string;
+};
 
 // Jumlah baris yang dimuat per permintaan (paginasi "muat lebih banyak").
 const PAGE_SIZE = 50;
 
 export default function TableClient() {
-  const [filters, setFilters] = useState<Filters>({ q: "", brand: "", tenor: "", status: "", wa: "", sort: "newest" });
+  const [filters, setFilters] = useState<Filters>({
+    q: "",
+    brand: "",
+    tenor: "",
+    status: "",
+    wa: "",
+    wa_status: "",
+    source: "",
+    sort: "newest",
+  });
   const [rows, setRows] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -136,11 +154,20 @@ export default function TableClient() {
           <option value="">Semua Tenor</option>
           {Array.from({ length: MAX_TENOR }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n} Bulan</option>)}
         </select>
+        <select value={filters.source} onChange={(e) => setF("source", e.target.value)} aria-label="Filter sumber data">
+          <option value="">Semua Sumber Data</option>
+          <option value="ro">DATA RO (input manual)</option>
+          <option value="blast">DATA BLAST (Excel)</option>
+        </select>
         <select value={filters.wa} onChange={(e) => setF("wa", e.target.value)} aria-label="Filter status WhatsApp">
           <option value="">Semua Nomor WA</option>
           <option value="valid">WA Valid</option>
           <option value="empty">WA Kosong</option>
           <option value="invalid">WA Tidak Valid</option>
+        </select>
+        <select value={filters.wa_status} onChange={(e) => setF("wa_status", e.target.value)} aria-label="Filter status proses WA">
+          <option value="">Semua Status Proses</option>
+          {WA_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
         <select value={filters.status} onChange={(e) => setF("status", e.target.value)} aria-label="Filter status komunikasi">
           <option value="">Semua Status</option>
@@ -171,6 +198,8 @@ export default function TableClient() {
               <th>Nomor Kontrak</th>
               <th>Nama Konsumen</th>
               <th>Nomor WhatsApp</th>
+              <th>Sumber</th>
+              <th>Status Proses</th>
               <th>Plat Motor</th>
               <th>Merek</th>
               <th>Tipe Motor</th>
@@ -181,10 +210,21 @@ export default function TableClient() {
           </thead>
           <tbody>
             {rows.map((c) => (
-              <tr key={c.id}>
+              <tr
+                key={c.id}
+                className={
+                  c.wa_status === "Selesai Dikonfirmasi"
+                    ? "row-ok"
+                    : !c.wa_valid && c.whatsapp
+                      ? "row-danger"
+                      : undefined
+                }
+              >
                 <td>{c.contract_no}</td>
                 <td><button className="name-link" onClick={() => setSelected(c)}>{c.name}</button></td>
                 <td>{c.whatsapp ? displayPhone(c.whatsapp) : "-"}</td>
+                <td>{c.batch_id ? "BLAST" : "RO"}</td>
+                <td>{c.wa_status}</td>
                 <td>{c.plate || "-"}</td>
                 <td>{c.brand || "-"}</td>
                 <td>{c.motor_type || "-"}</td>
@@ -197,6 +237,11 @@ export default function TableClient() {
         </table>
         {!loading && rows.length === 0 && <div className="empty">Belum ada data yang cocok.</div>}
       </div>
+
+      <p className="hint">
+        <span className="legend-swatch row-ok" /> Sudah difollow up (status proses &quot;Selesai Dikonfirmasi&quot;) ·{" "}
+        <span className="legend-swatch row-danger" /> Nomor WA tidak valid.
+      </p>
 
       {rows.length < total && (
         <div style={{ marginTop: ".75rem", textAlign: "center" }}>

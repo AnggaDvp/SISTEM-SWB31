@@ -127,6 +127,24 @@ export default function ImportClient() {
     });
   }
 
+  function clearAllRows() {
+    if (rows.length === 0) return;
+    if (
+      !window.confirm(
+        "Hapus SEMUA data pada tabel pemeriksaan ini? Data yang sudah tersimpan di database TIDAK terpengaruh.",
+      )
+    )
+      return;
+    setRows([]);
+    setSelected(new Set());
+    setDupSet(new Set());
+    setQ("");
+    setKetFilter("");
+    setWaFilter("");
+    setError("");
+    setNotice("Semua baris pemeriksaan dihapus. Database tidak berubah.");
+  }
+
   const stats = useMemo(() => {
     let valid = 0;
     let invalid = 0;
@@ -389,6 +407,9 @@ export default function ImportClient() {
             <button className="btn secondary" onClick={() => setSelected(new Set())}>KOSONGKAN PILIHAN</button>
             <button className="btn" disabled={busy} onClick={() => void save()}>
               {busy ? "MENYIMPAN…" : `SIMPAN ${selected.size} BARIS KE DATABASE`}
+            </button>
+            <button className="btn danger" disabled={busy || rows.length === 0} onClick={clearAllRows}>
+              HAPUS SEMUA DATA
             </button>
           </div>
 

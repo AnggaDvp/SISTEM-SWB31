@@ -29,6 +29,7 @@ export async function GET(req: Request) {
     const status = sp.get("status") ?? "";
     const wa = sp.get("wa") ?? ""; // valid | empty | invalid
     const waStatus = sp.get("wa_status") ?? "";
+    const source = sp.get("source") ?? ""; // ro (input manual) | blast (dari Excel)
     const orderBy = SORTS[sp.get("sort") ?? "newest"] ?? SORTS.newest;
 
     // Paginasi (opsional). limit<=0 berarti tanpa batas (perilaku lama).
@@ -71,6 +72,9 @@ export async function GET(req: Request) {
       where.push("batch_id = ?");
       args.push(batchIdN);
     }
+    // Sumber data: RO = input manual (batch_id kosong), BLAST = hasil import Excel (batch_id terisi).
+    if (source === "ro") where.push("batch_id IS NULL");
+    else if (source === "blast") where.push("batch_id IS NOT NULL");
 
     const db = await getDb();
     const res = await db.execute({

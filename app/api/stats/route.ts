@@ -21,7 +21,13 @@ export async function GET() {
                     AND whatsapp GLOB '628[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*'
                    THEN 1 ELSE 0 END) AS wa_valid,
           AVG(CASE WHEN tenor IS NOT NULL AND installment_running IS NOT NULL THEN (tenor - installment_running) END) AS avg_remaining,
-          SUM(CASE WHEN tenor IS NOT NULL AND installment_running IS NOT NULL AND (tenor - installment_running) <= ? THEN 1 ELSE 0 END) AS near_maturity
+          SUM(CASE WHEN tenor IS NOT NULL AND installment_running IS NOT NULL AND (tenor - installment_running) <= ? THEN 1 ELSE 0 END) AS near_maturity,
+          SUM(CASE WHEN wa_status = 'Selesai Dikonfirmasi' THEN 1 ELSE 0 END) AS followed_up,
+          SUM(CASE WHEN batch_id IS NULL THEN 1 ELSE 0 END) AS ro_total,
+          SUM(CASE WHEN batch_id IS NOT NULL THEN 1 ELSE 0 END) AS blast_total,
+          SUM(CASE WHEN batch_id IS NULL AND wa_status = 'Selesai Dikonfirmasi' THEN 1 ELSE 0 END) AS ro_followed_up,
+          SUM(CASE WHEN batch_id IS NOT NULL AND wa_status = 'Selesai Dikonfirmasi' THEN 1 ELSE 0 END) AS blast_followed_up,
+          SUM(CASE WHEN batch_id IS NOT NULL AND wa_status = 'Gagal' THEN 1 ELSE 0 END) AS blast_failed
         FROM customers`,
         args: [NEAR_MATURITY],
       }),
@@ -58,6 +64,15 @@ export async function GET() {
       near_maturity_threshold: NEAR_MATURITY,
       status_distribution: statusDist,
       brand_distribution: brandDist,
+      follow_up: {
+        done: Number(t.followed_up ?? 0),
+        not_followable: total - waValid,
+        ro_total: Number(t.ro_total ?? 0),
+        ro_done: Number(t.ro_followed_up ?? 0),
+        blast_total: Number(t.blast_total ?? 0),
+        blast_done: Number(t.blast_followed_up ?? 0),
+        blast_failed: Number(t.blast_failed ?? 0),
+      },
       blasts: {
         today: Number((blastToday.rows[0] as Record<string, unknown>).n ?? 0),
         last_7_days: Number((blast7d.rows[0] as Record<string, unknown>).n ?? 0),

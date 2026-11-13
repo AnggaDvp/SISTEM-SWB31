@@ -155,7 +155,9 @@ textarea { min-height: 240px; font-size: .9rem; resize: vertical; }
 .suggest button:hover { background: var(--red-soft); }
 
 /* ---------------- Toolbar & tabel ---------------- */
-.toolbar { display: grid; grid-template-columns: 2fr repeat(5, 1fr); gap: .5rem; margin-bottom: .75rem; }
+.toolbar { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .75rem; }
+.toolbar > * { flex: 1 1 150px; min-width: 0; }
+.toolbar > :first-child { flex: 2 1 240px; }
 .toolbar-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: .75rem; }
 .count { color: var(--muted); font-size: .85rem; margin-right: auto; }
 
@@ -173,12 +175,24 @@ tbody tr:hover { background: #fafbfc; }
 tbody tr.row-danger { background: var(--red-soft); }
 tbody tr.row-danger:hover { background: #fbdbe1; }
 tbody tr.row-danger td { color: var(--red-darker); font-weight: 600; }
+/* Baris hijau: sudah difollow up (status proses "Selesai Dikonfirmasi"). */
+tbody tr.row-ok { background: #e9f8ef; }
+tbody tr.row-ok:hover { background: #d8f1e2; }
+tbody tr.row-ok td { color: #14602f; font-weight: 600; }
 td.num, th.num { text-align: center; }
 .name-link {
   background: none; border: 0; padding: 0; font: inherit; font-weight: 700;
   color: var(--red); cursor: pointer; text-decoration: underline; text-align: left;
 }
 .empty { padding: 1.5rem; text-align: center; color: var(--muted); }
+
+/* Keterangan warna baris */
+.legend-swatch {
+  display: inline-block; width: 14px; height: 14px; border-radius: 3px;
+  vertical-align: -2px; margin-right: .25rem; border: 1px solid var(--line);
+}
+.legend-swatch.row-ok { background: #e9f8ef; border-color: #bfe6cf; }
+.legend-swatch.row-danger { background: var(--red-soft); border-color: var(--red-line); }
 
 /* ---------------- Dashboard ---------------- */
 .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .85rem; margin-bottom: 1rem; }
@@ -194,6 +208,13 @@ td.num, th.num { text-align: center; }
 .stat-value { font-size: 1.7rem; font-weight: 800; color: var(--red); margin-top: .2rem; line-height: 1.2; }
 .stat-card.stat-danger { background: var(--red-soft); border-color: var(--red-line); border-left-color: var(--red-darker); }
 .stat-card.stat-danger .stat-value { color: var(--red-darker); }
+.stat-card.stat-ok { background: #e9f8ef; border-color: #bfe6cf; border-left-color: var(--ok); }
+.stat-card.stat-ok .stat-value { color: var(--ok); }
+.stat-foot { font-size: .74rem; color: var(--muted); margin-top: .25rem; }
+
+/* Progres blast otomatis */
+.auto-progress { height: 12px; background: var(--red-soft); border: 1px solid var(--red-line); border-radius: 999px; overflow: hidden; }
+.auto-progress-fill { height: 100%; background: linear-gradient(90deg, var(--red), var(--red-dark)); transition: width .3s ease; }
 
 .dashboard-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: .85rem; margin-bottom: 1rem; }
 .dashboard-row .card { margin-bottom: 0; }
@@ -249,8 +270,6 @@ details summary { cursor: pointer; font-size: .85rem; color: var(--red); font-we
 }
 
 @media (max-width: 900px) {
-  .toolbar { grid-template-columns: 1fr 1fr; }
-  .toolbar > :first-child { grid-column: 1 / -1; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
   .dashboard-row { grid-template-columns: 1fr; }
   .template-layout { grid-template-columns: 1fr; }
@@ -262,13 +281,17 @@ details summary { cursor: pointer; font-size: .85rem; color: var(--red); font-we
   .nav-links { width: 100%; flex-wrap: nowrap; overflow-x: auto; }
   .nav-links a { padding: .7rem .7rem; font-size: .8rem; }
   .container { padding: .85rem; }
-  .toolbar { grid-template-columns: 1fr 1fr; }
   .drawer { padding: 1rem; }
+  /* Semua kolom filter menjadi satu kolom penuh agar mudah disentuh di ponsel. */
+  .toolbar > * { flex: 1 1 100%; }
+  .toolbar-actions { gap: .4rem; }
+  .toolbar-actions .btn { flex: 1 1 auto; }
+  .count { flex: 1 1 100%; margin-right: 0; }
+  th, td { padding: .5rem .55rem; font-size: .82rem; }
 }
 
 @media (max-width: 480px) {
   .row { grid-template-columns: 1fr; }
-  .toolbar { grid-template-columns: 1fr; }
   .container { padding: .7rem; }
   .card { padding: 1rem; }
   h1 { font-size: 1.1rem; }
@@ -279,3 +302,4 @@ details summary { cursor: pointer; font-size: .85rem; color: var(--red); font-we
   .drawer { padding: .9rem; }
   .blast-stats { gap: 1rem; }
 }
+
