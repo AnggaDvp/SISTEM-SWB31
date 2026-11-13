@@ -1,40 +1,46 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { BRANDS, MAX_TENOR, STATUSES, type Customer } from "@/lib/types";
 import { displayPhone } from "@/lib/validation";
-import { DEFAULT_TEMPLATE } from "@/lib/template";
 import CustomerForm from "@/components/CustomerForm";
 import DetailPanel from "@/components/DetailPanel";
-import TemplateEditor from "@/components/TemplateEditor";
+import { DEFAULT_TEMPLATE } from "@/lib/template";
 
 type Filters = { q: string; brand: string; tenor: string; status: string; wa: string; sort: string };
+
+// Jumlah baris yang dimuat per permintaan (paginasi "muat lebih banyak").
+const PAGE_SIZE = 50;
 
 export default function TableClient() {
   const [filters, setFilters] = useState<Filters>({ q: "", brand: "", tenor: "", status: "", wa: "", sort: "newest" });
   const [rows, setRows] = useState<Customer[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [selected, setSelected] = useState<Customer | null>(null);
   const [editing, setEditing] = useState<Customer | null>(null);
   const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
-  const [isDefaultTpl, setIsDefaultTpl] = useState(true);
-  const [tplLoaded, setTplLoaded] = useState(false);
   const [waImage, setWaImage] = useState<string | null>(null);
   const [waImageName, setWaImageName] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const load = useCallback(async (f: Filters) => {
+  const load = useCallback(async (f: Filters, offset = 0) => {
     setLoading(true);
     setError("");
     try {
       const sp = new URLSearchParams();
       Object.entries(f).forEach(([k, v]) => v && sp.set(k, v));
+      sp.set("limit", String(PAGE_SIZE));
+      sp.set("offset", String(offset));
       const res = await fetch(`/api/customers?${sp.toString()}`, { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return setError(data.error ?? "Gagal memuat data.");
-      setRows(data.customers as Customer[]);
+      const list = (data.customers ?? []) as Customer[];
+      setRows((prev) => (offset > 0 ? [...prev, ...list] : list));
+      setTotal(Number(data.total ?? list.length));
     } catch {
       setError("Tidak dapat terhubung ke server.");
     } finally {
@@ -44,9 +50,25 @@ export default function TableClient() {
 
   // Muat ulang setiap filter berubah (pencarian ditunda sebentar agar tidak membebani server).
   useEffect(() => {
-    const t = setTimeout(() => void load(filters), filters.q ? 250 : 0);
+    const t = setTimeout(() => void load(filters, 0), filters.q ? 250 : 0);
     return () => clearTimeout(t);
   }, [filters, load]);
+
+  // Buka detail otomatis bila URL berisi ?focus=<id> (tautan dari Dashboard/Status).
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("focus");
+    if (!id) return;
+    let alive = true;
+    fetch(`/api/customers/${id}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (alive && d.customer) setSelected(d.customer as Customer);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     fetch("/api/template", { cache: "no-store" })
@@ -54,13 +76,11 @@ export default function TableClient() {
       .then((d) => {
         if (typeof d.template === "string") {
           setTemplate(d.template);
-          setIsDefaultTpl(!!d.isDefault);
           setWaImage(typeof d.image === "string" ? d.image : null);
           setWaImageName(typeof d.imageName === "string" ? d.imageName : null);
         }
       })
-      .catch(() => undefined)
-      .finally(() => setTplLoaded(true));
+      .catch(() => undefined);
   }, []);
 
   const setF = (k: keyof Filters, v: string) => setFilters((p) => ({ ...p, [k]: v }));
@@ -131,11 +151,13 @@ export default function TableClient() {
           <option value="oldest">Terlama diinput</option>
           <option value="name_asc">Nama A–Z</option>
           <option value="name_desc">Nama Z–A</option>
+          <option value="remaining_asc">Sisa angsuran terkecil</option>
+          <option value="remaining_desc">Sisa angsuran terbesar</option>
         </select>
       </div>
 
       <div className="toolbar-actions">
-        <span className="count">{loading ? "Memuat..." : `${rows.length} konsumen`}</span>
+        <span className="count">{loading && rows.length === 0 ? "Memuat..." : `Menampilkan ${rows.length} dari ${total} konsumen`}</span>
         <a className="btn secondary" href="/api/export" download>EXPORT CSV (EXCEL)</a>
         <a className="btn secondary" href="/api/backup" download>BACKUP DATABASE</a>
         <button className="btn secondary" onClick={() => fileRef.current?.click()}>PULIHKAN BACKUP</button>
@@ -176,21 +198,16 @@ export default function TableClient() {
         {!loading && rows.length === 0 && <div className="empty">Belum ada data yang cocok.</div>}
       </div>
 
+      {rows.length < total && (
+        <div style={{ marginTop: ".75rem", textAlign: "center" }}>
+          <button className="btn secondary" disabled={loading} onClick={() => void load(filters, rows.length)}>
+            {loading ? "MEMUAT..." : `MUAT LEBIH BANYAK (${total - rows.length} lagi)`}
+          </button>
+        </div>
+      )}
+
       <div style={{ marginTop: "1rem" }}>
-        {tplLoaded && (
-          <TemplateEditor
-            template={template}
-            isDefault={isDefaultTpl}
-            image={waImage}
-            imageName={waImageName}
-            onSaved={(t, d, img, imgName) => {
-              setTemplate(t);
-              setIsDefaultTpl(d);
-              setWaImage(img);
-              setWaImageName(imgName);
-            }}
-          />
-        )}
+        <Link className="btn secondary" href="/template">→ KELOLA TEMPLATE BLAST</Link>
       </div>
 
       {selected && !editing && (

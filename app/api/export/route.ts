@@ -16,6 +16,8 @@ export async function GET(req: Request) {
       "Nomor Kontrak",
       "Nama Konsumen",
       "Nomor WhatsApp",
+      "Nomor HP Asli",
+      "KET FU",
       "Plat Motor",
       "Merek",
       "Tipe Motor",
@@ -23,6 +25,7 @@ export async function GET(req: Request) {
       "Angsuran Berjalan",
       "Sisa Angsuran",
       "Status Komunikasi",
+      "Status Proses WA",
       "Tanggal Input (UTC)",
     ];
     const lines = [header.map(csvCell).join(",")];
@@ -33,6 +36,8 @@ export async function GET(req: Request) {
           c.contract_no,
           c.name,
           displayPhone(c.whatsapp),
+          c.raw_phone,
+          c.ket_fu,
           c.plate,
           c.brand,
           c.motor_type,
@@ -40,6 +45,7 @@ export async function GET(req: Request) {
           c.installment_running,
           c.remaining,
           c.comm_status,
+          c.wa_status,
           c.created_at,
         ]
           .map(csvCell)

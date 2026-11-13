@@ -3,7 +3,7 @@ import { getDb } from "@/lib/db";
 import { serverError } from "@/lib/api";
 import { CUSTOMER_COLS, escapeLike, rowToCustomer, UPSERT_SQL } from "@/lib/customers";
 import { parseCustomer } from "@/lib/validation";
-import { BRANDS, STATUSES } from "@/lib/types";
+import { BRANDS, STATUSES, WA_STATUSES } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,7 +13,12 @@ const SORTS: Record<string, string> = {
   oldest: "created_at ASC, id ASC",
   name_asc: "name COLLATE NOCASE ASC, id ASC",
   name_desc: "name COLLATE NOCASE DESC, id DESC",
+  // Sisa angsuran = tenor - angsuran berjalan. Data tanpa tenor/angsuran diletakkan paling bawah.
+  remaining_asc: "((tenor IS NULL OR installment_running IS NULL)) ASC, (tenor - installment_running) ASC, id ASC",
+  remaining_desc: "((tenor IS NULL OR installment_running IS NULL)) ASC, (tenor - installment_running) DESC, id DESC",
 };
+
+const MAX_LIMIT = 200;
 
 export async function GET(req: Request) {
   try {
@@ -23,7 +28,14 @@ export async function GET(req: Request) {
     const tenor = sp.get("tenor") ?? "";
     const status = sp.get("status") ?? "";
     const wa = sp.get("wa") ?? ""; // valid | empty | invalid
+    const waStatus = sp.get("wa_status") ?? "";
     const orderBy = SORTS[sp.get("sort") ?? "newest"] ?? SORTS.newest;
+
+    // Paginasi (opsional). limit<=0 berarti tanpa batas (perilaku lama).
+    const limitRaw = Number(sp.get("limit"));
+    const offsetRaw = Number(sp.get("offset"));
+    const limit = Number.isInteger(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, MAX_LIMIT) : 0;
+    const offset = Number.isInteger(offsetRaw) && offsetRaw > 0 ? offsetRaw : 0;
 
     const where: string[] = [];
     const args: (string | number)[] = [];
@@ -33,9 +45,9 @@ export async function GET(req: Request) {
       const waQ = q.startsWith("0") ? "62" + q.slice(1) : q.replace(/^\+/, "");
       const plateQ = `%${escapeLike(q.replace(/\s+/g, ""))}%`;
       where.push(
-        `(contract_no LIKE ? ESCAPE '\\' OR name LIKE ? ESCAPE '\\' OR whatsapp LIKE ? ESCAPE '\\' OR whatsapp LIKE ? ESCAPE '\\' OR REPLACE(plate, ' ', '') LIKE ? ESCAPE '\\')`,
+        `(contract_no LIKE ? ESCAPE '\\' OR name LIKE ? ESCAPE '\\' OR whatsapp LIKE ? ESCAPE '\\' OR whatsapp LIKE ? ESCAPE '\\' OR plate LIKE ? ESCAPE '\\' OR brand LIKE ? ESCAPE '\\' OR motor_type LIKE ? ESCAPE '\\' OR ket_fu LIKE ? ESCAPE '\\' OR replace(plate, ' ', '') LIKE ? ESCAPE '\\')`,
       );
-      args.push(like, like, like, `%${escapeLike(waQ)}%`, plateQ);
+      args.push(like, like, like, `%${escapeLike(waQ)}%`, like, like, like, like, plateQ);
     }
     if (brand && (BRANDS as readonly string[]).includes(brand)) {
       where.push("brand = ?");
@@ -50,6 +62,15 @@ export async function GET(req: Request) {
       where.push("comm_status = ?");
       args.push(status);
     }
+    if (waStatus && (WA_STATUSES as readonly string[]).includes(waStatus)) {
+      where.push("wa_status = ?");
+      args.push(waStatus);
+    }
+    const batchIdN = Number(sp.get("batch_id"));
+    if (Number.isInteger(batchIdN) && batchIdN > 0) {
+      where.push("batch_id = ?");
+      args.push(batchIdN);
+    }
 
     const db = await getDb();
     const res = await db.execute({
@@ -62,7 +83,10 @@ export async function GET(req: Request) {
     else if (wa === "empty") customers = customers.filter((c) => !c.whatsapp);
     else if (wa === "invalid") customers = customers.filter((c) => c.whatsapp && !c.wa_valid);
 
-    return NextResponse.json({ customers });
+    const total = customers.length;
+    if (limit > 0) customers = customers.slice(offset, offset + limit);
+
+    return NextResponse.json({ customers, total });
   } catch (e) {
     return serverError(e);
   }
@@ -94,7 +118,18 @@ export async function POST(req: Request) {
 
     await db.execute({
       sql: UPSERT_SQL,
-      args: [d.contract_no, d.name, d.whatsapp, d.plate, d.brand, d.motor_type, d.tenor, d.installment_running],
+      args: [
+        d.contract_no,
+        d.name,
+        d.whatsapp,
+        d.raw_phone ?? "",
+        d.ket_fu ?? "",
+        d.plate,
+        d.brand,
+        d.motor_type,
+        d.tenor,
+        d.installment_running,
+      ],
     });
     const saved = await db.execute({
       sql: `SELECT ${CUSTOMER_COLS} FROM customers WHERE contract_no = ?`,

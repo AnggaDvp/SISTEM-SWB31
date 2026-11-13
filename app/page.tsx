@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import DashboardClient from "./(app)/DashboardClient";
 
 export default function Home() {
-  redirect("/input");
+  return <DashboardClient />;
 }

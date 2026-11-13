@@ -2,8 +2,9 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SYSTEM NSS SWB31",
-  description: "SYSTEM NSS SWB31 – WhatsApp Blast Management",
+  title: "SWB31",
+  description: "SWB31 – NSS Finance WhatsApp Blast Management",
+  icons: { icon: "/favicon.svg" },
   robots: { index: false, follow: false },
 };
 

@@ -3,7 +3,7 @@ import { getDb } from "@/lib/db";
 import { serverError } from "@/lib/api";
 import { CUSTOMER_COLS, rowToCustomer } from "@/lib/customers";
 import { parseCustomer } from "@/lib/validation";
-import { STATUSES } from "@/lib/types";
+import { STATUSES, WA_STATUSES } from "@/lib/types";
 import { TEMPLATE_KEY } from "@/lib/template";
 
 export const runtime = "nodejs";
@@ -28,12 +28,15 @@ export async function GET(req: Request) {
           contract_no: c.contract_no,
           name: c.name,
           whatsapp: c.whatsapp,
+          raw_phone: c.raw_phone,
+          ket_fu: c.ket_fu,
           plate: c.plate,
           brand: c.brand,
           motor_type: c.motor_type,
           tenor: c.tenor,
           installment_running: c.installment_running,
           comm_status: c.comm_status,
+          wa_status: c.wa_status,
           created_at: c.created_at,
         };
       }),
@@ -77,15 +80,35 @@ export async function POST(req: Request) {
         typeof rawStatus === "string" && (STATUSES as readonly string[]).includes(rawStatus)
           ? rawStatus
           : "Belum Dihubungi";
+      const rawWaStatus = (item as Record<string, unknown>).wa_status;
+      const waStatus =
+        typeof rawWaStatus === "string" && (WA_STATUSES as readonly string[]).includes(rawWaStatus)
+          ? rawWaStatus
+          : "Belum Diproses";
       stmts.push({
-        sql: `INSERT INTO customers (contract_no, name, whatsapp, plate, brand, motor_type, tenor, installment_running, comm_status)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        sql: `INSERT INTO customers (contract_no, name, whatsapp, raw_phone, ket_fu, plate, brand, motor_type, tenor, installment_running, comm_status, wa_status)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
               ON CONFLICT(contract_no) DO UPDATE SET
-                name = excluded.name, whatsapp = excluded.whatsapp, plate = excluded.plate, brand = excluded.brand,
+                name = excluded.name, whatsapp = excluded.whatsapp, raw_phone = excluded.raw_phone,
+                ket_fu = excluded.ket_fu, plate = excluded.plate, brand = excluded.brand,
                 motor_type = excluded.motor_type, tenor = excluded.tenor,
                 installment_running = excluded.installment_running, comm_status = excluded.comm_status,
+                wa_status = excluded.wa_status,
                 updated_at = datetime('now')`,
-        args: [d.contract_no, d.name, d.whatsapp, d.plate, d.brand, d.motor_type, d.tenor, d.installment_running, status],
+        args: [
+          d.contract_no,
+          d.name,
+          d.whatsapp,
+          d.raw_phone ?? "",
+          d.ket_fu ?? "",
+          d.plate,
+          d.brand,
+          d.motor_type,
+          d.tenor,
+          d.installment_running,
+          status,
+          waStatus,
+        ],
       });
     }
 

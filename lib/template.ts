@@ -27,15 +27,24 @@ Note: Sisa angsuran dan denda bisa dipotong saat pencairan sesuai ketentuan.
 
 Berminat pengajuan di bulan ini? Dapatkan keuntungan yang luar biasa! BALAS "IYA" untuk pengajuan promo bulan ini bersama NSC Finance.`;
 
-export const PLACEHOLDERS = ["{KONDISI_SALAM}", "{NAMA_KONSUMEN}", "{NOMOR_KONTRAK}"] as const;
+// Penanda yang bisa disisipkan ke template. Mendukung penamaan lama dan baru.
+export const PLACEHOLDERS = [
+  "{KONDISI_SALAM}",
+  "{NAMA_PEMOHON}",
+  "{FAKTUR}",
+  "{NO_HP}",
+  "{NAMA_KONSUMEN}",
+  "{NOMOR_KONTRAK}",
+] as const;
 
 export function buildMessage(
   template: string,
-  data: { name: string; contract_no: string },
+  data: { name: string; contract_no: string; phone?: string },
   now: Date = new Date(),
 ): string {
   return template
     .replace(/\{KONDISI_SALAM\}/gi, () => getGreeting(now))
-    .replace(/\{NAMA_KONSUMEN\}/gi, () => data.name)
-    .replace(/\{NOMOR_KONTRAK\}/gi, () => data.contract_no);
+    .replace(/\{NAMA_(?:KONSUMEN|PEMOHON)\}/gi, () => data.name)
+    .replace(/\{(?:NOMOR_)?KONTRAK\}|\{FAKTUR\}/gi, () => data.contract_no)
+    .replace(/\{NO_HP\}/gi, () => data.phone ?? "");
 }

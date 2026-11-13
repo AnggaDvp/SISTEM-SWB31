@@ -1,5 +1,5 @@
 import { createClient, type Client } from "@libsql/client/web";
-import { SCHEMA_STATEMENTS } from "./schema";
+import { SCHEMA_STATEMENTS, migrateBrandConstraint, migrateExtraColumns } from "./schema";
 
 // Hanya dipakai di server (API routes / server components). Token tidak pernah dikirim ke browser.
 let client: Client | null = null;
@@ -12,13 +12,16 @@ export async function getDb(): Promise<Client> {
     client = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
   }
   if (!ready) {
-    ready = client
-      .batch(SCHEMA_STATEMENTS, "write")
-      .then(() => undefined)
-      .catch((e) => {
-        ready = null;
-        throw e;
-      });
+    ready = (async () => {
+      // Migrasi: longgarkan CHECK brand lama (Honda/Yamaha/Kawasaki) agar menerima merek baru.
+      await migrateBrandConstraint(client);
+      await client.batch(SCHEMA_STATEMENTS, "write");
+      // Migrasi: tambah kolom baru (ket_fu, wa_status, batch_id, status blast, dll.) pada DB lama.
+      await migrateExtraColumns(client);
+    })().catch((e) => {
+      ready = null;
+      throw e;
+    });
   }
   await ready;
   return client;

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { serverError } from "@/lib/api";
 import { CUSTOMER_COLS, rowToCustomer } from "@/lib/customers";
-import { parseCustomer } from "@/lib/validation";
+import { normalizePhone, parseCustomer } from "@/lib/validation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,9 +48,46 @@ export async function PUT(req: Request, ctx: Ctx) {
     }
 
     const upd = await db.execute({
-      sql: `UPDATE customers SET contract_no = ?, name = ?, whatsapp = ?, plate = ?, brand = ?, motor_type = ?,
+      sql: `UPDATE customers SET contract_no = ?, name = ?, whatsapp = ?, raw_phone = ?, plate = ?, brand = ?, motor_type = ?,
             tenor = ?, installment_running = ?, updated_at = datetime('now') WHERE id = ?`,
-      args: [d.contract_no, d.name, d.whatsapp, d.plate, d.brand, d.motor_type, d.tenor, d.installment_running, id],
+      args: [
+        d.contract_no,
+        d.name,
+        d.whatsapp,
+        d.raw_phone ?? "",
+        d.plate,
+        d.brand,
+        d.motor_type,
+        d.tenor,
+        d.installment_running,
+        id,
+      ],
+    });
+    if (upd.rowsAffected === 0) return NextResponse.json({ error: "Data tidak ditemukan." }, { status: 404 });
+
+    const res = await db.execute({ sql: `SELECT ${CUSTOMER_COLS} FROM customers WHERE id = ?`, args: [id] });
+    return NextResponse.json({ customer: rowToCustomer(res.rows[0]) });
+  } catch (e) {
+    return serverError(e);
+  }
+}
+
+export async function PATCH(req: Request, ctx: Ctx) {
+  try {
+    const id = parseId((await ctx.params).id);
+    if (!id) return NextResponse.json({ error: "ID tidak valid." }, { status: 400 });
+
+    const body = (await req.json().catch(() => null)) as { whatsapp?: unknown } | null;
+    if (!body || typeof body.whatsapp !== "string") {
+      return NextResponse.json({ error: "Data tidak valid." }, { status: 400 });
+    }
+    const whatsapp = normalizePhone(body.whatsapp);
+    if (whatsapp.length > 20) return NextResponse.json({ error: "Nomor WhatsApp terlalu panjang." }, { status: 400 });
+
+    const db = await getDb();
+    const upd = await db.execute({
+      sql: "UPDATE customers SET whatsapp = ?, updated_at = datetime('now') WHERE id = ?",
+      args: [whatsapp, id],
     });
     if (upd.rowsAffected === 0) return NextResponse.json({ error: "Data tidak ditemukan." }, { status: 404 });
 

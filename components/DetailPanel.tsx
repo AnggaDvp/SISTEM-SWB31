@@ -16,10 +16,25 @@ type Props = {
   onUpdated: (c: Customer) => void;
 };
 
+// Waktu tersimpan dalam UTC ("YYYY-MM-DD HH:MM:SS"); tampilkan dalam zona Asia/Jakarta.
+function formatJakarta(value: string | null): string {
+  if (!value) return "-";
+  const iso = value.includes("T") ? value : value.replace(" ", "T") + "Z";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return value;
+  return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(d);
+}
+
 export default function DetailPanel({ customer: c, template, image, imageName, onClose, onEdit, onDelete, onUpdated }: Props) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState("");
+  // Kondisi: petugas menandai nomor tidak bisa dihubungi di WhatsApp,
+  // lalu memilih menghapus nomor atau mempertahankannya.
+  const [askUnreachable, setAskUnreachable] = useState(false);
+  const [busyWa, setBusyWa] = useState(false);
+  // Riwayat blast: berapa kali konsumen ini dihubungi & kapan terakhir.
+  const [blast, setBlast] = useState<{ count: number; last_at: string | null } | null>(null);
   // Blob PNG gambar poster sudah dikonversi sebelumnya agar clipboard.write bisa dipanggil
   // langsung dalam gesture klik (tanpa await loading gambar yang memutus gesture).
   const imageBlobRef = useRef<Blob | null>(null);
@@ -28,6 +43,21 @@ export default function DetailPanel({ customer: c, template, image, imageName, o
     setToast(msg);
     window.setTimeout(() => setToast(""), 12000);
   }
+
+  // Ambil riwayat blast konsumen ini (jumlah + waktu terakhir dihubungi).
+  useEffect(() => {
+    let alive = true;
+    setBlast(null);
+    fetch(`/api/customers/${c.id}/blasts`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (alive) setBlast({ count: Number(d.count ?? 0), last_at: d.last_at ?? null });
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [c.id]);
 
   // Pre-konversi gambar poster ke Blob PNG segera setelah gambar tersedia.
   useEffect(() => {
@@ -67,9 +97,41 @@ export default function DetailPanel({ customer: c, template, image, imageName, o
     }
   }
 
+  // Hapus nomor WhatsApp (kosongkan) ketika nomor tidak bisa dihubungi di WA.
+  async function clearWhatsapp() {
+    setError("");
+    setBusyWa(true);
+    try {
+      const res = await fetch(`/api/customers/${c.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ whatsapp: "" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return setError(data.error ?? "Gagal menghapus nomor WhatsApp.");
+      setAskUnreachable(false);
+      onUpdated(data.customer as Customer);
+      showToast("Nomor WhatsApp dihapus.");
+    } catch {
+      setError("Tidak dapat terhubung ke server.");
+    } finally {
+      setBusyWa(false);
+    }
+  }
+
   // Pesan dibuat saat tombol diklik, sehingga salam mengikuti jam saat itu (Asia/Jakarta).
   async function openWhatsApp() {
     if (!c.wa_valid) return;
+
+    // Catat aksi blast ke server (fire-and-forget; tidak menghalangi pembukaan WhatsApp).
+    fetch("/api/blasts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ customer_id: c.id }),
+    }).catch(() => undefined);
+    // Perbarui tampilan riwayat langsung tanpa perlu memuat ulang.
+    setBlast((b) => ({ count: (b?.count ?? 0) + 1, last_at: new Date().toISOString() }));
+
     const msg = buildMessage(template, { name: c.name, contract_no: c.contract_no });
 
     let copied = false;
@@ -118,6 +180,8 @@ export default function DetailPanel({ customer: c, template, image, imageName, o
     ["Lama Angsuran", c.tenor !== null ? `${c.tenor} Bulan` : "-"],
     ["Angsuran Berjalan", c.installment_running !== null ? `Ke-${c.installment_running}` : "-"],
     ["Sisa Angsuran", c.remaining !== null ? `${c.remaining} Bulan` : "-"],
+    ["Jumlah Blast", blast ? `${blast.count} kali` : "..."],
+    ["Terakhir Dihubungi", blast ? formatJakarta(blast.last_at) : "..."],
   ];
 
   const waNote = !c.whatsapp
@@ -169,6 +233,31 @@ export default function DetailPanel({ customer: c, template, image, imageName, o
           <button className="btn secondary" onClick={onEdit}>EDIT DATA</button>
           <button className="btn danger" onClick={onDelete}>HAPUS DATA</button>
         </div>
+
+        {!!c.whatsapp && (
+          <div style={{ marginTop: ".6rem" }}>
+            {!askUnreachable ? (
+              <button className="btn secondary" style={{ width: "100%" }} onClick={() => setAskUnreachable(true)}>
+                NOMOR TIDAK BISA DIHUBUNGI DI WA
+              </button>
+            ) : (
+              <div className="alert error" style={{ marginBottom: 0 }}>
+                <div style={{ marginBottom: ".5rem" }}>
+                  Nomor {displayPhone(c.whatsapp)} tidak bisa dihubungi di WhatsApp. Hapus nomor atau pertahankan?
+                </div>
+                <div className="actions" style={{ marginTop: 0 }}>
+                  <button className="btn danger" disabled={busyWa} onClick={() => void clearWhatsapp()}>
+                    {busyWa ? "MENGHAPUS..." : "HAPUS NOMOR"}
+                  </button>
+                  <button className="btn secondary" disabled={busyWa} onClick={() => setAskUnreachable(false)}>
+                    PERTAHANKAN
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {waNote && <div className="warn" style={{ marginTop: ".6rem" }}>{waNote}</div>}
         {c.wa_valid && (
           <div className="hint" style={{ marginTop: ".6rem" }}>

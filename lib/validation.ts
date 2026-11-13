@@ -48,8 +48,11 @@ export function parseCustomer(body: unknown): ParseResult {
   if (!name) return { ok: false, error: "Nama Konsumen wajib diisi." };
   if (name.length > 120) return { ok: false, error: "Nama Konsumen terlalu panjang." };
 
-  const whatsapp = normalizePhone(str("whatsapp"));
+  const rawPhone = str("whatsapp");
+  const whatsapp = normalizePhone(rawPhone);
   if (whatsapp.length > 20) return { ok: false, error: "Nomor WhatsApp terlalu panjang." };
+
+  const ket_fu = str("ket_fu").slice(0, 200);
 
   const plate = normalizePlate(str("plate"));
   if (plate.length > 20) return { ok: false, error: "Plat nomor terlalu panjang." };
@@ -78,6 +81,17 @@ export function parseCustomer(body: unknown): ParseResult {
 
   return {
     ok: true,
-    data: { contract_no, name, whatsapp, plate, brand, motor_type, tenor, installment_running: running },
+    data: {
+      contract_no,
+      name,
+      whatsapp,
+      raw_phone: rawPhone.slice(0, 20),
+      ket_fu,
+      plate,
+      brand,
+      motor_type,
+      tenor,
+      installment_running: running,
+    },
   };
 }

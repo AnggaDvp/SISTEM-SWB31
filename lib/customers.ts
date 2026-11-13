@@ -3,7 +3,7 @@ import { displayPhone, isWhatsappValid } from "./validation";
 import type { Customer } from "./types";
 
 export const CUSTOMER_COLS =
-  "id, contract_no, name, whatsapp, plate, brand, motor_type, tenor, installment_running, comm_status, created_at, updated_at";
+  "id, contract_no, name, whatsapp, raw_phone, ket_fu, plate, brand, motor_type, tenor, installment_running, comm_status, wa_status, batch_id, created_at, updated_at";
 
 const num = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v));
 
@@ -17,6 +17,7 @@ export function rowToCustomer(row: Row): Customer {
     contract_no: String(r.contract_no),
     name: String(r.name),
     whatsapp,
+    raw_phone: String(r.raw_phone ?? ""),
     wa_valid: isWhatsappValid(whatsapp),
     plate: String(r.plate ?? ""),
     brand: String(r.brand ?? ""),
@@ -25,6 +26,9 @@ export function rowToCustomer(row: Row): Customer {
     installment_running: running,
     remaining: tenor !== null && running !== null ? tenor - running : null,
     comm_status: String(r.comm_status),
+    wa_status: String(r.wa_status ?? "Belum Diproses"),
+    ket_fu: String(r.ket_fu ?? ""),
+    batch_id: num(r.batch_id),
     created_at: String(r.created_at),
     updated_at: String(r.updated_at),
   };
@@ -32,11 +36,13 @@ export function rowToCustomer(row: Row): Customer {
 
 export { displayPhone };
 
-export const UPSERT_SQL = `INSERT INTO customers (contract_no, name, whatsapp, plate, brand, motor_type, tenor, installment_running)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+export const UPSERT_SQL = `INSERT INTO customers (contract_no, name, whatsapp, raw_phone, ket_fu, plate, brand, motor_type, tenor, installment_running)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(contract_no) DO UPDATE SET
   name = excluded.name,
   whatsapp = excluded.whatsapp,
+  raw_phone = excluded.raw_phone,
+  ket_fu = excluded.ket_fu,
   plate = excluded.plate,
   brand = excluded.brand,
   motor_type = excluded.motor_type,
