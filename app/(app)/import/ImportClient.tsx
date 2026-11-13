@@ -25,6 +25,19 @@ function waState(raw: string): "empty" | "valid" | "invalid" {
   return isWhatsappValid(n) ? "valid" : "invalid";
 }
 
+/**
+ * Status WA pada tabel pemeriksaan Excel:
+ * - KET FU "NO"  -> WA TIDAK VALID
+ * - KET FU "OK"  -> WA VALID
+ * - selain itu   -> mengikuti hasil pembacaan nomor HP
+ */
+function waStateOfRow(r: { no_hp: string; ket_fu: string }): "empty" | "valid" | "invalid" {
+  const k = (r.ket_fu ?? "").trim().toLowerCase();
+  if (k === "ok") return "valid";
+  if (k === "no") return "invalid";
+  return waState(r.no_hp);
+}
+
 const EMPTY_MAPPING: ColumnMapping = { no: -1, faktur: -1, nama: -1, no_hp: -1, chat_wa: -1, ket_fu: -1 };
 
 export default function ImportClient() {
@@ -152,7 +165,7 @@ export default function ImportClient() {
     let ok = 0;
     let no = 0;
     for (const r of rows) {
-      const st = waState(r.no_hp);
+      const st = waStateOfRow(r);
       if (st === "valid") valid++;
       else if (st === "invalid") invalid++;
       else kosong++;
@@ -178,7 +191,7 @@ export default function ImportClient() {
       if (qq && !(r.nama.toLowerCase().includes(qq) || r.faktur.toLowerCase().includes(qq))) return false;
       if (ketFilter && (r.ket_fu ?? "").trim() !== ketFilter) return false;
       if (waFilter) {
-        const st = waState(r.no_hp);
+        const st = waStateOfRow(r);
         if (waFilter === "valid" && st !== "valid") return false;
         if (waFilter === "invalid" && st === "valid") return false;
       }
@@ -261,7 +274,8 @@ export default function ImportClient() {
       <h1>IMPORT EXCEL WHATSAPP BLAST</h1>
       <p className="hint" style={{ marginTop: "-.5rem" }}>
         Unggah file XLSX/XLS/CSV. Kolom dibaca otomatis (NO, FAKTUR, NAMA PEMOHON, NO HP, CHAT WA, KET FU). Data
-        ditampilkan dulu untuk diperiksa sebelum disimpan ke database.
+        ditampilkan dulu untuk diperiksa sebelum disimpan ke database. Status WA mengikuti KET FU:{" "}
+        <strong>OK = VALID</strong>, <strong>NO = TIDAK VALID</strong>.
       </p>
 
       {error && <div className="alert error">{error}</div>}
@@ -432,7 +446,7 @@ export default function ImportClient() {
               </thead>
               <tbody>
                 {pageRows.map((r) => {
-                  const st = waState(r.no_hp);
+                  const st = waStateOfRow(r);
                   const dup = dupSet.has(r.rowNumber);
                   return (
                     <tr key={r.rowNumber} className={dup ? "row-danger" : st === "invalid" ? "row-danger" : undefined}>
@@ -452,7 +466,7 @@ export default function ImportClient() {
                       <td>{r.ket_fu || "-"}</td>
                       <td>
                         {dup && <span className="warn" style={{ display: "block" }}>Duplikat</span>}
-                        {st === "valid" ? "Valid" : st === "invalid" ? "Tidak valid" : "Kosong"}
+                        {st === "valid" ? "VALID" : st === "invalid" ? "TIDAK VALID" : "KOSONG"}
                       </td>
                       <td>
                         <button className="btn secondary" onClick={() => deleteRows([r.rowNumber])}>HAPUS</button>

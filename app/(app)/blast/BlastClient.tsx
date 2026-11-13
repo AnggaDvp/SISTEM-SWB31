@@ -13,6 +13,10 @@ const AUTO_LIMIT = 20;
 // Jeda antar nomor: 1–5 menit (60–300 detik), diacak tiap nomor.
 const DELAY_MIN_SECONDS = 60;
 const DELAY_MAX_SECONDS = 300;
+// Bila blast hari ini sudah lebih dari angka ini, tampilkan popup peringatan sebelum blast otomatis.
+const BLAST_TODAY_WARNING = 15;
+// Pilihan jumlah data pada popup peringatan.
+const AUTO_CHOICES = [5, 10, 20] as const;
 
 type AutoResult = {
   id: number;
@@ -58,6 +62,9 @@ export default function BlastClient() {
   const [autoDone, setAutoDone] = useState<AutoResult[] | null>(null);
   const autoStopRef = useRef(false);
   const skipRef = useRef<(() => void) | null>(null);
+  // Blast hari ini (dari /api/stats) + popup peringatan bila sudah terlalu banyak.
+  const [blastToday, setBlastToday] = useState(0);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,6 +104,26 @@ export default function BlastClient() {
       })
       .catch(() => undefined);
   }, []);
+
+  /** Ambil jumlah blast hari ini dari dashboard (untuk popup peringatan). */
+  const refreshBlastToday = useCallback(async (): Promise<number | null> => {
+    try {
+      const r = await fetch("/api/stats", { cache: "no-store" });
+      const d = await r.json().catch(() => ({}));
+      const t = d?.blasts?.today;
+      if (typeof t === "number") {
+        setBlastToday(t);
+        return t;
+      }
+    } catch {
+      /* abaikan — pakai nilai terakhir */
+    }
+    return null;
+  }, []);
+
+  useEffect(() => {
+    void refreshBlastToday();
+  }, [refreshBlastToday]);
 
   const ketOptions = useMemo(() => {
     const set = new Set<string>();
@@ -246,10 +273,10 @@ export default function BlastClient() {
     });
   }
 
-  async function startAuto() {
+  async function startAuto(limit: number = AUTO_LIMIT) {
     if (autoRunning) return;
     const base = selected.size > 0 ? filtered.filter((r) => selected.has(r.id)) : filtered;
-    const targets = base.slice(0, AUTO_LIMIT);
+    const targets = base.slice(0, limit);
     if (targets.length === 0) return setError("Tidak ada konsumen untuk diproses.");
     autoStopRef.current = false;
     setError("");
@@ -317,6 +344,18 @@ export default function BlastClient() {
         collected.length - ok
       } tidak bisa difollow up.`,
     );
+    void refreshBlastToday();
+  }
+
+  /** Dipanggil tombol blast otomatis: popup peringatan bila blast hari ini sudah > 15. */
+  async function requestAuto() {
+    if (autoRunning) return;
+    const today = (await refreshBlastToday()) ?? blastToday;
+    if (today > BLAST_TODAY_WARNING) {
+      setConfirmOpen(true);
+      return;
+    }
+    void startAuto(AUTO_LIMIT);
   }
 
   function stopAuto() {
@@ -609,7 +648,7 @@ export default function BlastClient() {
         <button
           className="btn"
           disabled={filtered.length === 0 || autoRunning}
-          onClick={() => void startAuto()}
+          onClick={() => void requestAuto()}
         >
           BLAST OTOMATIS {AUTO_LIMIT} DATA (JEDA 1–5 MENIT)
         </button>
@@ -618,6 +657,13 @@ export default function BlastClient() {
         </button>
         <Link className="btn secondary" href="/table">KEMBALI KE DATA</Link>
       </div>
+
+      {blastToday > BLAST_TODAY_WARNING && (
+        <p className="warn">
+          Blast hari ini sudah {blastToday} (batas aman {BLAST_TODAY_WARNING}). Blast otomatis akan menampilkan
+          peringatan terlebih dahulu.
+        </p>
+      )}
 
       <div className="table-wrap">
         <table>
@@ -669,6 +715,39 @@ export default function BlastClient() {
 
       {rows.length >= 200 && (
         <p className="hint">Menampilkan maksimal 200 konsumen. Persempit dengan pencarian/filter untuk melihat sisanya.</p>
+      )}
+
+      {confirmOpen && (
+        <div className="modal-wrap" role="dialog" aria-modal="true" aria-labelledby="auto-confirm-title">
+          <div className="modal">
+            <h2 id="auto-confirm-title">ANDA YAKIN BLAST OTOMATIS?</h2>
+            <p className="warn" style={{ fontSize: ".9rem" }}>
+              Blast hari ini sudah <strong>{blastToday}</strong> (lebih dari {BLAST_TODAY_WARNING}). Pengiriman
+              WhatsApp dalam jumlah banyak berisiko membuat nomor Anda <strong>TERBLOK</strong> oleh WhatsApp.
+              Sebaiknya jumlahnya dibatasi.
+            </p>
+            <p className="hint">Pilih jumlah data yang ingin diblash otomatis hari ini:</p>
+            <div className="modal-options">
+              {AUTO_CHOICES.map((n) => (
+                <button
+                  key={n}
+                  className="btn"
+                  onClick={() => {
+                    setConfirmOpen(false);
+                    void startAuto(n);
+                  }}
+                >
+                  BLAST {n} DATA
+                </button>
+              ))}
+            </div>
+            <div className="modal-options">
+              <button className="btn secondary" onClick={() => setConfirmOpen(false)}>
+                BATALKAN
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

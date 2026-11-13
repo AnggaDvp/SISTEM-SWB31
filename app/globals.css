@@ -259,6 +259,22 @@ td.num, th.num { text-align: center; }
 }
 details summary { cursor: pointer; font-size: .85rem; color: var(--red); font-weight: 700; }
 
+/* ---------------- Dialog / popup ---------------- */
+.modal-wrap {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(31, 36, 48, .5);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.modal {
+  background: #fff; border-radius: var(--radius); border-top: 4px solid var(--red);
+  width: 100%; max-width: 460px; padding: 1.25rem;
+  box-shadow: 0 12px 40px rgba(16, 24, 40, .28);
+  max-height: 90vh; overflow-y: auto;
+}
+.modal h2 { margin: 0 0 .5rem; }
+.modal-options { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+.modal-options .btn { flex: 1 1 auto; }
+
 .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
 .login-wrap .card { width: 100%; max-width: 380px; }
 

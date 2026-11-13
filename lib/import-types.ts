@@ -7,7 +7,7 @@ export const IMPORT_FIELDS = [
   { key: "nama", label: "NAMA PEMOHON", hint: "Nama konsumen" },
   { key: "no_hp", label: "NO HP", hint: "Nomor WhatsApp" },
   { key: "chat_wa", label: "CHAT WA", hint: "Hyperlink WhatsApp" },
-  { key: "ket_fu", label: "KET FU", hint: "Keterangan follow-up" },
+  { key: "ket_fu", label: "KET FU", hint: "Keterangan faktur — OK = WA valid, NO = WA tidak valid" },
 ] as const;
 
 export type ImportFieldKey = (typeof IMPORT_FIELDS)[number]["key"];
